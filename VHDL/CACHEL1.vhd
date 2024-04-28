@@ -4,8 +4,8 @@ use ieee.numeric_std.all;
 
 entity CACHEL1 is
 port(I1,I2: in std_ulogic_vector(31 downto 0);
-     O1,O2: out std_ulogic_vector(31 downto 0);
-     O3, O4: out std_ulogic;
+     O1,O2: out std_ulogic_vector(31 downto 0); --read down below (it's quite long)
+     O3, O4: out std_ulogic; --hit AND ready (ready is '1' if all rainbows and sunshines)
      C1, C2: in std_ulogic);
 end CACHEL1;
 
@@ -20,9 +20,9 @@ begin
 	D3 <= transport C1 after 13 ns; --MemWrite
 	D4 <= transport C2 after 13 ns; --MemRead
 
-	-- D1(4 downto 0) 5 bit di pointer (32 indirizzi possibili nella cache) !! offset non presente
-	-- D1(31 downto 5) 27 bit di tag (istruzione)
-	-- R1(58 downto 32) 27 bit di tag
+	-- D1(4 downto 0) 5 pointer bits (32 possible addresses in the cache) !! offset not present
+	-- D1(31 downto 5) 27 bits of tag (instruction)
+	-- R1(58 downto 32) 27 bits of tag
 	-- R1(59) valid
 
 	Control:process(D1, D2, D3, D4)
@@ -34,41 +34,41 @@ begin
 			VALIDFLAG := MEMDATA(59);
 		end if;
 
-		if(D1(31 downto 5) = MEMDATA(58 downto 32)) then
+		if(D1(31 downto 5) = MEMDATA(58 downto 32)) then --check if address tag same
 			TAGFLAG := '1';
 		else
 			TAGFLAG := '0';
 		end if;
 
-		if(D3 = '0' and D4 = '0' and MEMDATA = "000000000000000000000000000000000000000000000000000000000000") then
+		if(D3 = '0' and D4 = '0' and MEMDATA = "000000000000000000000000000000000000000000000000000000000000") then --idk what happs here
 			HITFLAG := '1';
 		else
 			HITFLAG := VALIDFLAG and TAGFLAG;
 		end if;
 
-		READYFLAG := '0';
+		READYFLAG := '0'; --all cases below will check READYFLAG to 1
 
-		if(D3 = '0' and D4 = '1') then --lettura
-			if(HITFLAG = '1') then --prendi il dato dalla cache
-				R2 <= MEMDATA(31 downto 0);
+		if(D3 = '0' and D4 = '1') then --reading
+			if(HITFLAG = '1') then --get data from cache
+				R2 <= MEMDATA(31 downto 0); --R2 is the data
 				READYFLAG := '1';
-			else --metti in uscita l'indirizzo del dato da prendere in memoria
+			else --output the address of the data to be taken into memory
 				R2 <= D1;
 				READYFLAG := '1';
 			end if;
-		else if(D3 = '1' and D4 = '0') then --scrittura
-			if(VALIDFLAG = '0') then --scrivo il dato nella cache (ho hit = '0' in quanto il dato precedente è NON valido)
-				M1(to_integer(unsigned(D1(4 downto 0)))) <= '1'&D1(31 downto 5)&D2;
+		else if(D3 = '1' and D4 = '0') then --writing
+			if(VALIDFLAG = '0') then --I write the data in the cache (I have hit = '0' as the previous data is NOT valid)
+				M1(to_integer(unsigned(D1(4 downto 0)))) <= '1'&D1(31 downto 5)&D2; --concat '1', D1 (address), and the data D2. Total 60 bits
 				HITFLAG := '1';
 				READYFLAG := '1';
 			else if(VALIDFLAG = '1') then
-				if(HITFLAG = '1') then --aggiorno il dato
-					M1(to_integer(unsigned(D1(4 downto 0)))) <= '1'&D1(31 downto 5)&D2; --dato valido, stesso tag, nuovo dato
+				if(HITFLAG = '1') then --I update the data
+					M1(to_integer(unsigned(D1(4 downto 0)))) <= '1'&D1(31 downto 5)&D2; --valid data, same tag, new data
 					READYFLAG := '1';
-				else --tag non corrispondenti -> write back
-					R3 <= MEMDATA(31 downto 0); --dato da scrivere in memoria write-back
-					R2 <= MEMDATA(58 downto 32)&D1(4 downto 0);
-					M1(to_integer(unsigned(D1(4 downto 0)))) <= '1'&D1(31 downto 5)&D2; --dato valido, diverso tag, nuovo dato
+				else --mismatched tags -> write back
+					R3 <= MEMDATA(31 downto 0); --data to be written into write-back memory
+					R2 <= MEMDATA(58 downto 32)&D1(4 downto 0); --address to write the write back
+					M1(to_integer(unsigned(D1(4 downto 0)))) <= '1'&D1(31 downto 5)&D2; --valid data, different tag, new data
 					READYFLAG := '1';
 				end if;
 			end if;
@@ -79,8 +79,8 @@ begin
 		READY <= READYFLAG;
 	end process;
 
-	O1 <= R2; --dato letto o indirizzo da leggere in memoria o indirizzo dove scrivere il write back
-	O2 <= R3; --dato da scrivere in memoria (write back)
+	O1 <= R2; --data read OR address to read in memory OR address to write the write back
+	O2 <= R3; --data to be written into memory (write back)
 	O3 <= HIT; --hit
 	O4 <= READY; --ready
 

@@ -3,10 +3,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity DM is
-port(I1,I2: in std_ulogic_vector(31 downto 0);
-     O1: out std_ulogic_vector(31 downto 0);
+port(I1,I2: in std_ulogic_vector(31 downto 0); --address and data value
+     O1: out std_ulogic_vector(31 downto 0); --
      O2: out std_ulogic;
-     C1, C2: in std_ulogic);
+     C1, C2: in std_ulogic); --write OR read signal
 end DM;
 
 architecture DM1 of DM is
@@ -48,7 +48,7 @@ begin
 	MEMWRITE <= C1; --MemWrite
 	MEMREAD <= C2; --MemRead
 
-	--ritardi introdotti dalle memorie:
+	--delays introduced by memories:
 	--CACHEL1 --> 25ns
 	--CACHEL2 --> 250ns
 
@@ -56,8 +56,8 @@ begin
 	CACHEL11: CACHEL1 port map(ADDRESS1, WRITE_DATA1, D3, D4, HIT, L1READY, MEMWRITE1, MEMREAD1);
 	CC1: CC port map(D3, D4, D5, D6, HIT_D, MEMWRITE_D, MEMREAD_D, MUXCTRL, WRITEREADY, L1READY, HIT, MEMWRITE, MEMREAD);
 
-	--D5 = D3 = dato letto o indirizzo da leggere in memoria
-	--D6 = D4 = dato da scrivere in memoria (write back)
+	--D5 = D3 = data read or address to be read into memory
+	--D6 = D4 = data to be written into memory (write back)
 
 	CACHEL21: CACHEL2 generic map(N => 128)
 			  port map(D5, D6, D7, L2READY, MEMWRITE_D, MEMREAD_D);

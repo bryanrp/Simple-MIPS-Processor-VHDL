@@ -15,7 +15,7 @@ signal D4, D5, D6, D7, D10, D11: std_ulogic := '0';
 begin
 	D1 <= I1; --address
 	D2 <= I2; --write data
-	D3 <= I3; --data (dato dalla memoria da scrivere nella cache nel caso di lettura con miss)
+	D3 <= I3; --data (given by the memory to be written to the cache in the case of reading with miss)
 	D4 <= C1; --mem write
 	D5 <= C2; --mem read
 	D6 <= C3; --ready l2
@@ -24,7 +24,7 @@ begin
 	feedbackcontrol:process(D1, D2, D3, D4, D5, D6, D7)
 	begin
 		D8 <= D1;
-		if(D4 = '0' and D5 = '1' and D6 = '1' and D7 = '0') then
+		if(D4 = '0' and D5 = '1' and D6 = '1' and D7 = '0') then --read operation AND l2 is ready AND 
 			D9 <= D3;
 			D10 <= '1';
 			D11 <= '0';
