@@ -6,19 +6,19 @@ entity CACHEL1 is
 port(I1,I2: in std_ulogic_vector(31 downto 0);
      O1,O2: out std_ulogic_vector(31 downto 0); --read down below (it's quite long)
      O3, O4: out std_ulogic; --hit AND ready (ready is '1' if all rainbows and sunshines)
-     C1, C2: in std_ulogic);
+     C1, C2: in std_ulogic); --controls whether this is write or read operation
 end CACHEL1;
 
 architecture CACHEL11 of CACHEL1 is
-type MEMORY is array (0 to 31) of std_ulogic_vector(59 downto 0);
+type MEMORY is array (0 to 31) of std_ulogic_vector(59 downto 0); --array of size 32. each element is 60 bits.
 signal M1: MEMORY := (others => (others => '0'));
 signal D1, D2, R2, R3: std_ulogic_vector(31 downto 0) := (others => '0');
 signal D3, D4, HIT, READY: std_ulogic := '0';
 begin
-	D1 <= transport I1 after 13 ns; --address (TAG&POINTER)
-	D2 <= transport I2 after 13 ns; --Write Data
-	D3 <= transport C1 after 13 ns; --MemWrite
-	D4 <= transport C2 after 13 ns; --MemRead
+	D1 <= transport I1 after 13 ns; --address (TAG&POINTER) (address size is 32 bits)
+	D2 <= transport I2 after 13 ns; --Write Data (data size is 32 bits)
+	D3 <= transport C1 after 13 ns; --MemWrite (either 0 OR 1)
+	D4 <= transport C2 after 13 ns; --MemRead (either 0 OR 1)
 
 	-- D1(4 downto 0) 5 pointer bits (32 possible addresses in the cache) !! offset not present
 	-- D1(31 downto 5) 27 bits of tag (instruction)
@@ -30,7 +30,7 @@ begin
 	variable VALIDFLAG, TAGFLAG, HITFLAG, READYFLAG: std_ulogic := '0';
 	begin
 		if(to_integer(unsigned(D1(4 downto 0))) < 32) then
-			MEMDATA := M1(to_integer(unsigned(D1(4 downto 0))));
+			MEMDATA := M1(to_integer(unsigned(D1(4 downto 0)))); --accessing the array at index D1(4 downto 0). this is 60 bits
 			VALIDFLAG := MEMDATA(59);
 		end if;
 
