@@ -10,7 +10,8 @@ port(I1,I2: in std_ulogic_vector(31 downto 0);
 end CACHEL1;
 
 architecture CACHEL11 of CACHEL1 is
-type MEMORY is array (0 to 31) of std_ulogic_vector(59 downto 0); --array of size 32. each element is 60 bits.
+type MEMORY is array (0 to 15) of std_ulogic_vector(59 downto 0); --array of size 32. each element is 60 bits.
+signal M0: MEMORY := (others => (others => '0'));
 signal M1: MEMORY := (others => (others => '0'));
 signal D1, D2, R2, R3: std_ulogic_vector(31 downto 0) := (others => '0');
 signal D3, D4, HIT, READY: std_ulogic := '0';
@@ -20,7 +21,7 @@ begin
 	D3 <= transport C1 after 13 ns; --MemWrite (either 0 OR 1)
 	D4 <= transport C2 after 13 ns; --MemRead (either 0 OR 1)
 
-	-- D1(4 downto 0) 5 pointer bits (32 possible addresses in the cache) !! offset not present
+	-- D1(4 downto 1) 4 pointer bits (16 possible addresses in the cache) !! offset not present
 	-- D1(31 downto 5) 27 bits of tag (instruction)
 	-- R1(58 downto 32) 27 bits of tag
 	-- R1(59) valid
@@ -29,12 +30,16 @@ begin
 	variable MEMDATA: std_ulogic_vector(59 downto 0) := (others => '0');
 	variable VALIDFLAG, TAGFLAG, HITFLAG, READYFLAG: std_ulogic := '0';
 	begin
-		if(to_integer(unsigned(D1(4 downto 0))) < 32) then
-			MEMDATA := M1(to_integer(unsigned(D1(4 downto 0)))); --accessing the array at index D1(4 downto 0). this is 60 bits
+		if(to_integer(unsigned(D1(4 downto 1))) < 16) then
+			if (D1(5) = '0') then
+				MEMDATA := M0(to_integer(unsigned(D1(4 downto 1)))); --accessing the array at index D1(4 downto 1). this is 60 bits
+			else
+				MEMDATA := M1(to_integer(unsigned(D1(4 downto 1)))); --accessing the array at index D1(4 downto 1). this is 60 bits
+			end if;
 			VALIDFLAG := MEMDATA(59);
 		end if;
 
-		if(D1(31 downto 5) = MEMDATA(58 downto 32)) then --check if address tag same
+		if(D1(31 downto 6)&D1(0) = MEMDATA(58 downto 32)) then --check if address tag same
 			TAGFLAG := '1';
 		else
 			TAGFLAG := '0';
@@ -58,17 +63,29 @@ begin
 			end if;
 		else if(D3 = '1' and D4 = '0') then --writing
 			if(VALIDFLAG = '0') then --I write the data in the cache (I have hit = '0' as the previous data is NOT valid)
-				M1(to_integer(unsigned(D1(4 downto 0)))) <= '1'&D1(31 downto 5)&D2; --concat '1', D1 (address), and the data D2. Total 60 bits
+				if (D1(5) = '0') then
+					M0(to_integer(unsigned(D1(4 downto 1)))) <= '1'&D1(31 downto 6)&D1(0)&D2; --concat '1', D1 (address), and the data D2. Total 60 bits
+				else
+					M1(to_integer(unsigned(D1(4 downto 1)))) <= '1'&D1(31 downto 6)&D1(0)&D2; --concat '1', D1 (address), and the data D2. Total 60 bits
+				end if;
 				HITFLAG := '1';
 				READYFLAG := '1';
 			else if(VALIDFLAG = '1') then
 				if(HITFLAG = '1') then --I update the data
-					M1(to_integer(unsigned(D1(4 downto 0)))) <= '1'&D1(31 downto 5)&D2; --valid data, same tag, new data
+					if (D1(5) = '0') then
+						M0(to_integer(unsigned(D1(4 downto 1)))) <= '1'&D1(31 downto 6)&D1(0)&D2; --valid data, same tag, new data
+					else
+						M1(to_integer(unsigned(D1(4 downto 1)))) <= '1'&D1(31 downto 6)&D1(0)&D2; --valid data, same tag, new data
+					end if;	
 					READYFLAG := '1';
 				else --mismatched tags -> write back
 					R3 <= MEMDATA(31 downto 0); --data to be written into write-back memory
-					R2 <= MEMDATA(58 downto 32)&D1(4 downto 0); --address to write the write back
-					M1(to_integer(unsigned(D1(4 downto 0)))) <= '1'&D1(31 downto 5)&D2; --valid data, different tag, new data
+					R2 <= MEMDATA(58 downto 33)&D1(5 downto 1)&MEMDATA(32); --address to write the write back
+					if (D1(5) = '0') then
+						M0(to_integer(unsigned(D1(4 downto 1)))) <= '1'&D1(31 downto 6)&D1(0)&D2; --valid data, tag(&D1(31 downto 6)&D1(0)), new data
+					else
+						M1(to_integer(unsigned(D1(4 downto 1)))) <= '1'&D1(31 downto 6)&D1(0)&D2; --valid data, tag(&D1(31 downto 6)&D1(0)), new data
+					end if;
 					READYFLAG := '1';
 				end if;
 			end if;
