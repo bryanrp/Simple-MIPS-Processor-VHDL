@@ -11,7 +11,7 @@ end DM;
 
 architecture DM1 of DM is
 
-component CACHEL1 is
+component CACHEL1CONTROL is
 port(I1,I2: in std_ulogic_vector(31 downto 0);
      O1,O2: out std_ulogic_vector(31 downto 0);
      O3, O4: out std_ulogic;
@@ -53,7 +53,7 @@ begin
 	--CACHEL2 --> 250ns
 
 	CFC1: CFC port map(ADDRESS, WRITE_DATA, D7, MEMWRITE, MEMREAD, L2READY, HIT, ADDRESS1, WRITE_DATA1, MEMWRITE1, MEMREAD1);
-	CACHEL11: CACHEL1 port map(ADDRESS1, WRITE_DATA1, D3, D4, HIT, L1READY, MEMWRITE1, MEMREAD1);
+	CACHEL1CONTROL1: CACHEL1CONTROL port map(ADDRESS1, WRITE_DATA1, D3, D4, HIT, L1READY, MEMWRITE1, MEMREAD1);
 	CC1: CC port map(D3, D4, D5, D6, HIT_D, MEMWRITE_D, MEMREAD_D, MUXCTRL, WRITEREADY, L1READY, HIT, MEMWRITE, MEMREAD);
 
 	--D5 = D3 = data read or address to be read into memory
